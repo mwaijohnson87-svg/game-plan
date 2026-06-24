@@ -1,0 +1,180 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    @apply antialiased;
+    letter-spacing: -0.02em;
+  }
+
+  body {
+    @apply bg-background text-text-primary font-sans;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  /* Tabular figures for all numbers */
+  .font-mono,
+  [data-numeric] {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum';
+  }
+
+  /* Smooth scrolling */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Focus styles */
+  :focus-visible {
+    @apply outline-none ring-2 ring-primary ring-offset-2 ring-offset-background;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-surface;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-border rounded;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-text-muted;
+  }
+
+  /* Selection */
+  ::selection {
+    @apply bg-primary-dim text-text-primary;
+  }
+}
+
+@layer components {
+  /* Card/panel styles */
+  .panel {
+    @apply bg-surface border border-border rounded-md p-4;
+  }
+
+  .panel-raised {
+    @apply bg-surface-raised border border-border rounded-md p-4;
+  }
+
+  /* Badge styles */
+  .badge {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded text-data-sm font-mono;
+  }
+
+  .badge-primary {
+    @apply bg-primary-dim text-primary;
+  }
+
+  .badge-danger {
+    @apply bg-danger-dim text-danger;
+  }
+
+  .badge-amber {
+    @apply bg-amber-dim text-amber;
+  }
+
+  /* Button base */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 font-medium transition-all duration-fast rounded-md px-4 h-11;
+  }
+
+  .btn-primary {
+    @apply bg-primary text-background hover:opacity-90 active:scale-[0.98];
+  }
+
+  .btn-danger {
+    @apply bg-danger text-white hover:opacity-90 active:scale-[0.98];
+  }
+
+  .btn-ghost {
+    @apply bg-transparent text-text-secondary hover:bg-surface-raised hover:text-text-primary;
+  }
+
+  /* Input styles */
+  .input {
+    @apply bg-surface-raised border border-border rounded text-text-primary px-3 h-11 w-full font-mono text-data transition-all duration-fast;
+    @apply focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary;
+  }
+
+  .input::placeholder {
+    @apply text-text-muted;
+  }
+
+  /* Toggle tabs */
+  .toggle-active {
+    @apply transition-all duration-fast;
+  }
+
+  /* Price flash animations */
+  .flash-gain {
+    animation: flashGreen 400ms ease-out;
+  }
+
+  .flash-loss {
+    animation: flashRed 400ms ease-out;
+  }
+
+  /* Mono number displays */
+  .price {
+    @apply font-mono text-data-xl font-medium text-text-primary;
+  }
+
+  .price-sm {
+    @apply font-mono text-data font-medium text-text-primary;
+  }
+
+  .change {
+    @apply font-mono text-data-sm font-medium;
+  }
+}
+
+@layer utilities {
+  /* Depth bar utility for order book */
+  .depth-bar {
+    position: relative;
+  }
+
+  .depth-bar::before {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  .depth-bar-bid::before {
+    background: rgba(0, 212, 160, 0.1);
+  }
+
+  .depth-bar-ask::before {
+    background: rgba(255, 77, 106, 0.1);
+  }
+
+  /* Reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
