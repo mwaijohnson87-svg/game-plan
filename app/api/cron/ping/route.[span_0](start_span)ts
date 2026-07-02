@@ -1,15 +1,25 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
+// This handles the GET request (for testing in browser)
 export async function GET() {
   try {
-    // A tiny query to trigger database activity and reset the 7-day clock
-    const { data, error } = await supabase.from('profiles').select('id').limit(1);
-    
+    const { error } = await supabase.from('profiles').select('id').limit(1);
     if (error) throw error;
-    
     return NextResponse.json({ success: true, message: "Database keep-alive ping successful" });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  }
+}
+
+// This handles the HEAD request (for UptimeRobot's free tier)
+export async function HEAD() {
+  try {
+    const { error } = await supabase.from('profiles').select('id').limit(1);
+    if (error) throw error;
+    // HEAD requests cannot return a body text, only a 200 OK status code
+    return new NextResponse(null, { status: 200 });
+  } catch (error) {
+    return new NextResponse(null, { status: 500 });
   }
 }
