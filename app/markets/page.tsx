@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { Topbar } from '@/components/layout';
 import { MobileNav } from '@/components/layout/mobile-nav';
 import { useMarketStore } from '@/lib/stores';
-import { MARKET_OVERVIEWS, COUNTRY_FLAGS, getAllAssets } from '@/lib/data/mock-data';
-import type { Country, MarketSentiment, Asset } from '@/lib/types';
-import * as topojson from 'topojson-client';
+import { COUNTRY_FLAGS } from '@/lib/data/constants';
+import { useMarketOverviews, useMarketQuotes } from '@/lib/hooks/use-market-data';
+import type { Country, MarketSentiment, Asset, MarketOverview } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Globe, TrendingUp, TrendingDown, Minus, ArrowUpRight, ArrowDownRight } from 'lucide-react';
@@ -14,12 +14,11 @@ import { Globe, TrendingUp, TrendingDown, Minus, ArrowUpRight, ArrowDownRight } 
 export default function MarketsPage() {
   const setSelectedCountry = useMarketStore((s) => s.setSelectedCountry);
   const [selectedMarket, setSelectedMarket] = useState<Country | null>(null);
-  const [assets, setAssets] = useState<Asset[]>([]);
-  const svgRef = useRef<SVGSVGElement>(null);
 
-  useEffect(() => {
-    setAssets(getAllAssets());
-  }, []);
+  const { data: overviewData } = useMarketOverviews();
+  const { data: quotesData } = useMarketQuotes();
+  const marketOverviews: MarketOverview[] = overviewData?.overviews ?? [];
+  const assets: Asset[] = quotesData?.assets ?? [];
 
   const getSentimentColor = (sentiment: MarketSentiment) => {
     switch (sentiment) {
@@ -66,7 +65,6 @@ export default function MarketsPage() {
             Global Markets
           </h1>
 
-          {/* World Map Heat Map */}
           <Card className="bg-surface border-border mb-6">
             <CardHeader>
               <CardTitle className="text-lg text-text-primary">Market Sentiment Map</CardTitle>
@@ -74,7 +72,7 @@ export default function MarketsPage() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                {MARKET_OVERVIEWS.map((market) => (
+                {marketOverviews.map((market) => (
                   <button
                     key={market.country}
                     onClick={() => handleMarketClick(market.country)}
@@ -98,7 +96,10 @@ export default function MarketsPage() {
                       {market.sentiment === 'bullish' && <TrendingUp className="w-3 h-3 text-primary" />}
                       {market.sentiment === 'bearish' && <TrendingDown className="w-3 h-3 text-danger" />}
                       {market.sentiment === 'flat' && <Minus className="w-3 h-3 text-amber" />}
-                      <span className="text-xs font-mono" style={{ color: getSentimentColor(market.sentiment) }}>
+                      <span
+                        className="text-xs font-mono"
+                        style={{ color: getSentimentColor(market.sentiment) }}
+                      >
                         {market.indices[0]?.changePercent >= 0 ? '+' : ''}
                         {market.indices[0]?.changePercent.toFixed(2)}%
                       </span>
@@ -109,9 +110,8 @@ export default function MarketsPage() {
             </CardContent>
           </Card>
 
-          {/* Market Indices */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-            {MARKET_OVERVIEWS.map((market) => (
+            {marketOverviews.map((market) => (
               <Card key={market.country} className="bg-surface border-border">
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">
@@ -137,8 +137,11 @@ export default function MarketsPage() {
                           <div className="font-mono text-data-sm text-text-primary">
                             {formatCurrency(index.value)}
                           </div>
-                          <div className={`text-xs ${index.change >= 0 ? 'text-primary' : 'text-danger'}`}>
-                            {index.change >= 0 ? '+' : ''}{index.changePercent.toFixed(2)}%
+                          <div
+                            className={`text-xs ${index.change >= 0 ? 'text-primary' : 'text-danger'}`}
+                          >
+                            {index.change >= 0 ? '+' : ''}
+                            {index.changePercent.toFixed(2)}%
                           </div>
                         </div>
                       </div>
@@ -149,7 +152,6 @@ export default function MarketsPage() {
             ))}
           </div>
 
-          {/* Market Details */}
           {selectedMarket && (
             <Card className="bg-surface border-border">
               <CardHeader>
@@ -178,8 +180,16 @@ export default function MarketsPage() {
                           <div className="font-medium text-sm text-text-primary">{asset.symbol}</div>
                           <div className="text-xs text-text-muted">{asset.name}</div>
                         </div>
-                        <div className={`flex items-center gap-0.5 ${asset.change >= 0 ? 'text-primary' : 'text-danger'}`}>
-                          {asset.change >= 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
+                        <div
+                          className={`flex items-center gap-0.5 ${
+                            asset.change >= 0 ? 'text-primary' : 'text-danger'
+                          }`}
+                        >
+                          {asset.change >= 0 ? (
+                            <ArrowUpRight className="w-3 h-3" />
+                          ) : (
+                            <ArrowDownRight className="w-3 h-3" />
+                          )}
                           <span className="text-xs font-mono">{asset.changePercent.toFixed(2)}%</span>
                         </div>
                       </div>

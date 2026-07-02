@@ -13,13 +13,8 @@ import {
   CountryMarketTab,
 } from '@/components/trading';
 import { useMarketStore, usePortfolioStore, useOrderStore } from '@/lib/stores';
-import {
-  getAllAssets,
-  getAssetsByCountry,
-  generateMockPriceHistory,
-  generateMockOrderBook,
-  MOCK_NEWS,
-} from '@/lib/data/mock-data';
+import { useMarketQuotes, usePriceHistory, useMarketNews } from '@/lib/hooks/use-market-data';
+import { buildOrderBookFromQuote } from '@/lib/utils/order-book';
 import type { Asset, TimeFrame, OrderSide, OrderType } from '@/lib/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
@@ -39,33 +34,45 @@ export default function DashboardPage() {
   const addTradeRecord = useOrderStore((s) => s.addTradeRecord);
   const setSubmitting = useOrderStore((s) => s.setSubmitting);
 
-  const [assets, setAssets] = useState<Asset[]>([]);
-  const [priceHistory, setPriceHistory] = useState<any[]>([]);
-  const [orderBook, setOrderBook] = useState<any>(null);
-  const [news] = useState(MOCK_NEWS);
+  const { data: quotesData } = useMarketQuotes();
+  const { data: newsData } = useMarketNews();
+  const { data: historyData } = usePriceHistory(selectedAsset?.id, timeframe);
+
+  const assets: Asset[] = quotesData?.assets ?? [];
+  const news = newsData?.news ?? [];
+  const priceHistory = historyData?.points ?? [];
+
+  const orderBook = useMemo(() => {
+    if (!selectedAsset) return null;
+    const quote = historyData?.quote;
+    return buildOrderBookFromQuote(
+      selectedAsset.id,
+      quote?.price ?? selectedAsset.price,
+      quote?.bid,
+      quote?.ask
+    );
+  }, [selectedAsset, historyData?.quote]);
 
   useEffect(() => {
-    const allAssets = getAllAssets();
-    setAssets(allAssets);
-    if (allAssets.length > 0 && !selectedAsset) {
-      setSelectedAsset(allAssets[0]);
+    if (assets.length > 0 && !selectedAsset) {
+      setSelectedAsset(assets[0]);
     }
-  }, []);
+  }, [assets, selectedAsset, setSelectedAsset]);
 
   useEffect(() => {
-    const countryAssets = getAssetsByCountry(selectedCountry);
+    const countryAssets = assets.filter((a) => a.country === selectedCountry);
     if (countryAssets.length > 0) {
-      setSelectedAsset(countryAssets[0]);
+      const stillValid = countryAssets.some((a) => a.id === selectedAsset?.id);
+      if (!stillValid) {
+        setSelectedAsset(countryAssets[0]);
+      }
     }
-  }, [selectedCountry]);
+  }, [selectedCountry, assets, selectedAsset, setSelectedAsset]);
 
-  useEffect(() => {
-    if (selectedAsset) {
-      const days = timeframe === '1D' ? 1 : timeframe === '1W' ? 7 : timeframe === '1M' ? 30 : timeframe === '3M' ? 90 : 365;
-      setPriceHistory(generateMockPriceHistory(days));
-      setOrderBook(generateMockOrderBook(selectedAsset.price));
-    }
-  }, [selectedAsset, timeframe]);
+  const liveSelectedAsset = useMemo(() => {
+    if (!selectedAsset) return null;
+    return assets.find((a) => a.id === selectedAsset.id) ?? selectedAsset;
+  }, [assets, selectedAsset]);
 
   const filteredAssets = useMemo(() => {
     return assets.filter((a) => a.country === selectedCountry);
@@ -90,28 +97,28 @@ export default function DashboardPage() {
 
     await new Promise((resolve) => setTimeout(resolve, 1500));
 
-    if (!selectedAsset) return;
+    if (!liveSelectedAsset) return;
 
-    const price = order.type === 'market' ? selectedAsset.price : order.price || selectedAsset.price;
+    const price = order.type === 'market' ? liveSelectedAsset.price : order.price || liveSelectedAsset.price;
     const totalCost = order.quantity * price;
 
     if (order.side === 'buy') {
       updateCash(cash - totalCost);
 
       addHolding({
-        id: `${selectedAsset.id}-${Date.now()}`,
-        assetId: selectedAsset.id,
-        asset: selectedAsset,
+        id: `${liveSelectedAsset.id}-${Date.now()}`,
+        assetId: liveSelectedAsset.id,
+        asset: liveSelectedAsset,
         quantity: order.quantity,
         averageCost: price,
-        currentPrice: selectedAsset.price,
-        totalValue: order.quantity * selectedAsset.price,
+        currentPrice: liveSelectedAsset.price,
+        totalValue: order.quantity * liveSelectedAsset.price,
         pnl: 0,
         pnlPercent: 0,
         openDate: new Date(),
       });
     } else {
-      const holding = holdings.find((h) => h.assetId === selectedAsset.id);
+      const holding = holdings.find((h) => h.assetId === liveSelectedAsset.id);
       if (holding && holding.quantity >= order.quantity) {
         const proceeds = order.quantity * price;
         updateCash(cash + proceeds);
@@ -121,8 +128,8 @@ export default function DashboardPage() {
     addTradeRecord({
       id: `trade-${Date.now()}`,
       orderId: `order-${Date.now()}`,
-      assetId: selectedAsset.id,
-      asset: selectedAsset,
+      assetId: liveSelectedAsset.id,
+      asset: liveSelectedAsset,
       side: order.side,
       type: order.type,
       quantity: order.quantity,
@@ -143,7 +150,6 @@ export default function DashboardPage() {
       <Topbar />
 
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-[240px_1fr_280px] gap-0 overflow-hidden">
-        {/* Left Panel - Asset List */}
         <div className="hidden lg:flex flex-col bg-surface border-r border-border">
           <CountryMarketTab
             selectedCountry={selectedCountry}
@@ -155,7 +161,7 @@ export default function DashboardPage() {
                 <AssetListItem
                   key={asset.id}
                   asset={asset}
-                  isSelected={selectedAsset?.id === asset.id}
+                  isSelected={liveSelectedAsset?.id === asset.id}
                   onClick={() => setSelectedAsset(asset)}
                 />
               ))}
@@ -163,27 +169,26 @@ export default function DashboardPage() {
           </ScrollArea>
         </div>
 
-        {/* Center Panel - Chart and Order Book */}
         <div className="flex flex-col bg-background overflow-hidden">
           <div className="p-4 border-b border-border">
-            {selectedAsset && (
+            {liveSelectedAsset && (
               <div className="flex items-start justify-between">
                 <div>
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-lg font-semibold text-text-primary">
-                      {selectedAsset.name}
+                      {liveSelectedAsset.name}
                     </span>
-                    <span className="text-sm text-text-muted">{selectedAsset.symbol}</span>
+                    <span className="text-sm text-text-muted">{liveSelectedAsset.symbol}</span>
                     <span className="badge bg-surface-raised text-text-secondary">
-                      {selectedAsset.exchange}
+                      {liveSelectedAsset.exchange}
                     </span>
                   </div>
                   <PriceTicker
-                    symbol={selectedAsset.symbol}
-                    price={selectedAsset.price}
-                    change={selectedAsset.change}
-                    changePercent={selectedAsset.changePercent}
-                    currency={selectedAsset.currency}
+                    symbol={liveSelectedAsset.symbol}
+                    price={liveSelectedAsset.price}
+                    change={liveSelectedAsset.change}
+                    changePercent={liveSelectedAsset.changePercent}
+                    currency={liveSelectedAsset.currency}
                   />
                 </div>
               </div>
@@ -198,7 +203,7 @@ export default function DashboardPage() {
             />
           </div>
 
-          {orderBook && selectedAsset && (
+          {orderBook && liveSelectedAsset && (
             <div className="p-4 border-t border-border">
               <OrderBook
                 bids={orderBook.bids}
@@ -210,15 +215,13 @@ export default function DashboardPage() {
           )}
         </div>
 
-        {/* Right Panel - Order Form and Positions */}
         <div className="flex flex-col bg-surface border-l border-border overflow-hidden">
           <ScrollArea className="flex-1">
             <div className="p-4 space-y-4">
-              {selectedAsset && (
-                <OrderForm asset={selectedAsset} onSubmit={handleOrderSubmit} />
+              {liveSelectedAsset && (
+                <OrderForm asset={liveSelectedAsset} onSubmit={handleOrderSubmit} />
               )}
 
-              {/* Open Positions */}
               {openPositions.length > 0 && (
                 <div className="panel">
                   <h3 className="text-sm font-medium text-text-primary mb-3">
@@ -261,10 +264,8 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Bottom Bar - News Ticker */}
       <NewsTicker news={news} />
 
-      {/* Mobile Navigation */}
       <MobileNav />
     </div>
   );

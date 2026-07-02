@@ -2,7 +2,7 @@
 
 import { cn } from '@/lib/utils';
 import type { Country } from '@/lib/types';
-import { COUNTRY_FLAGS, COUNTRY_NAMES } from '@/lib/data/mock-data';
+import { COUNTRY_FLAGS, COUNTRY_NAMES } from '@/lib/data/constants';
 
 interface CountryMarketTabProps {
   selectedCountry: Country;

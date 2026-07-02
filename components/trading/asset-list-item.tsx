@@ -2,7 +2,7 @@
 
 import { cn } from '@/lib/utils';
 import type { Asset } from '@/lib/types';
-import { COUNTRY_FLAGS } from '@/lib/data/mock-data';
+import { COUNTRY_FLAGS } from '@/lib/data/constants';
 
 interface AssetListItemProps {
   asset: Asset;

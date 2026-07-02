@@ -1,34 +1,44 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Topbar } from '@/components/layout';
 import { MobileNav } from '@/components/layout/mobile-nav';
-import { FOREX_PAIRS, FOREX_CURRENCIES } from '@/lib/data/mock-data';
+import { FOREX_CURRENCIES } from '@/lib/data/constants';
+import { useForexPairs } from '@/lib/hooks/use-market-data';
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Coins, ArrowUpRight, ArrowDownRight, ArrowRightLeft, RefreshCcw } from 'lucide-react';
 import type { ForexCurrency, ForexPair } from '@/lib/types';
 
 export default function ForexPage() {
-  const [selectedPair, setSelectedPair] = useState<ForexPair>(FOREX_PAIRS[0]);
+  const { data } = useForexPairs();
+  const forexPairs: ForexPair[] = data?.pairs ?? [];
+
+  const [selectedPair, setSelectedPair] = useState<ForexPair | null>(null);
   const [fromCurrency, setFromCurrency] = useState<ForexCurrency>(FOREX_CURRENCIES[0]);
   const [toCurrency, setToCurrency] = useState<ForexCurrency>(FOREX_CURRENCIES[1]);
   const [fromAmount, setFromAmount] = useState<number>(1000);
   const [toAmount, setToAmount] = useState<number>(0);
 
+  useEffect(() => {
+    if (forexPairs.length > 0 && !selectedPair) {
+      setSelectedPair(forexPairs[0]);
+    }
+  }, [forexPairs, selectedPair]);
+
   const getRate = (from: string, to: string): number => {
-    const pair = FOREX_PAIRS.find(p =>
-      (p.baseCurrency === from && p.quoteCurrency === to) ||
-      (p.baseCurrency === to && p.quoteCurrency === from)
+    const pair = forexPairs.find(
+      (p) =>
+        (p.baseCurrency === from && p.quoteCurrency === to) ||
+        (p.baseCurrency === to && p.quoteCurrency === from)
     );
 
     if (!pair) return 1;
 
     if (pair.baseCurrency === from && pair.quoteCurrency === to) {
       return pair.rate;
-    } else {
-      return 1 / pair.rate;
     }
+    return 1 / pair.rate;
   };
 
   const convertCurrency = () => {
@@ -62,7 +72,6 @@ export default function ForexPage() {
           </h1>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Currency Converter */}
             <Card className="bg-surface border-border">
               <CardHeader>
                 <CardTitle className="text-lg text-text-primary flex items-center gap-2">
@@ -77,7 +86,12 @@ export default function ForexPage() {
                     <div className="flex gap-2">
                       <select
                         value={fromCurrency.code}
-                        onChange={(e) => setFromCurrency(FOREX_CURRENCIES.find(c => c.code === e.target.value) || FOREX_CURRENCIES[0])}
+                        onChange={(e) =>
+                          setFromCurrency(
+                            FOREX_CURRENCIES.find((c) => c.code === e.target.value) ||
+                              FOREX_CURRENCIES[0]
+                          )
+                        }
                         className="input flex-1"
                       >
                         {FOREX_CURRENCIES.map((c) => (
@@ -109,7 +123,12 @@ export default function ForexPage() {
                     <div className="flex gap-2">
                       <select
                         value={toCurrency.code}
-                        onChange={(e) => setToCurrency(FOREX_CURRENCIES.find(c => c.code === e.target.value) || FOREX_CURRENCIES[1])}
+                        onChange={(e) =>
+                          setToCurrency(
+                            FOREX_CURRENCIES.find((c) => c.code === e.target.value) ||
+                              FOREX_CURRENCIES[1]
+                          )
+                        }
                         className="input flex-1"
                       >
                         {FOREX_CURRENCIES.map((c) => (
@@ -127,35 +146,32 @@ export default function ForexPage() {
                   </div>
 
                   <div className="pt-2">
-                    <button
-                      onClick={convertCurrency}
-                      className="btn btn-primary w-full"
-                    >
+                    <button onClick={convertCurrency} className="btn btn-primary w-full">
                       Convert
                     </button>
                   </div>
 
                   <div className="text-center text-xs text-text-muted">
-                    1 {fromCurrency.code} = {formatRate(getRate(fromCurrency.code, toCurrency.code))} {toCurrency.code}
+                    1 {fromCurrency.code} ={' '}
+                    {formatRate(getRate(fromCurrency.code, toCurrency.code))} {toCurrency.code}
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Forex Pairs Grid */}
             <Card className="bg-surface border-border">
               <CardHeader>
                 <CardTitle className="text-lg text-text-primary">Live Forex Rates</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {FOREX_PAIRS.map((pair) => (
+                  {forexPairs.map((pair) => (
                     <button
                       key={pair.id}
                       onClick={() => setSelectedPair(pair)}
                       className={cn(
                         'w-full p-3 rounded-lg border transition-all text-left',
-                        selectedPair.id === pair.id
+                        selectedPair?.id === pair.id
                           ? 'border-primary bg-primary-dim'
                           : 'border-border bg-surface-raised hover:border-text-muted'
                       )}
@@ -173,17 +189,20 @@ export default function ForexPage() {
                           <div className="font-mono text-data-lg font-medium text-text-primary">
                             {formatRate(pair.rate)}
                           </div>
-                          <div className={cn(
-                            'flex items-center gap-1 justify-end text-xs',
-                            pair.change >= 0 ? 'text-primary' : 'text-danger'
-                          )}>
+                          <div
+                            className={cn(
+                              'flex items-center gap-1 justify-end text-xs',
+                              pair.change >= 0 ? 'text-primary' : 'text-danger'
+                            )}
+                          >
                             {pair.change >= 0 ? (
                               <ArrowUpRight className="w-3 h-3" />
                             ) : (
                               <ArrowDownRight className="w-3 h-3" />
                             )}
                             <span className="font-mono">
-                              {pair.change >= 0 ? '+' : ''}{pair.changePercent.toFixed(2)}%
+                              {pair.change >= 0 ? '+' : ''}
+                              {pair.changePercent.toFixed(2)}%
                             </span>
                           </div>
                         </div>

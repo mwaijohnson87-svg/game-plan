@@ -3,11 +3,11 @@
 import { useState } from 'react';
 import { Topbar } from '@/components/layout';
 import { MobileNav } from '@/components/layout/mobile-nav';
-import { MOCK_NEWS } from '@/lib/data/mock-data';
+import { useMarketNews } from '@/lib/hooks/use-market-data';
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Newspaper, Filter, TrendingUp, AlertCircle, Info } from 'lucide-react';
-import type { NewsCategory } from '@/lib/types';
+import type { NewsCategory, NewsItem } from '@/lib/types';
 
 const CATEGORIES: { id: NewsCategory | 'ALL'; label: string }[] = [
   { id: 'ALL', label: 'All' },
@@ -70,7 +70,7 @@ function ImpactButton({ impact, activeImpact, onClick }: {
   );
 }
 
-function NewsCard({ item }: { item: typeof MOCK_NEWS[0] }) {
+function NewsCard({ item }: { item: NewsItem }) {
   const config = getImpactConfig(item.impact);
   const Icon = config.icon;
 
@@ -116,14 +116,16 @@ function NewsCard({ item }: { item: typeof MOCK_NEWS[0] }) {
 export default function NewsPage() {
   const [activeCategory, setActiveCategory] = useState<NewsCategory | 'ALL'>('ALL');
   const [activeImpact, setActiveImpact] = useState<'all' | 'high' | 'medium' | 'low'>('all');
+  const { data } = useMarketNews();
+  const allNews: NewsItem[] = data?.news ?? [];
 
-  const filteredNews = MOCK_NEWS.filter((item) => {
+  const filteredNews = allNews.filter((item) => {
     if (activeCategory !== 'ALL' && item.category !== activeCategory) return false;
     if (activeImpact !== 'all' && item.impact !== activeImpact) return false;
     return true;
   });
 
-  const criticalNews = MOCK_NEWS.filter((n) => n.impact === 'high').slice(0, 3);
+  const criticalNews = allNews.filter((n) => n.impact === 'high').slice(0, 3);
 
   return (
     <div className="h-screen flex flex-col bg-background">

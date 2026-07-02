@@ -1,10 +1,10 @@
 'use client';
-
 import { useState } from 'react';
 import { Topbar } from '@/components/layout';
 import { MobileNav } from '@/components/layout/mobile-nav';
 import { usePortfolioStore } from '@/lib/stores';
-import { TBILLS, COUNTRY_FLAGS } from '@/lib/data/mock-data';
+import { COUNTRY_FLAGS } from '@/lib/data/constants';
+import { useTreasuryBills } from '@/lib/hooks/use-market-data';
 import type { TBill, Country } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,11 +14,14 @@ export default function TreasuryPage() {
   const cash = usePortfolioStore((s) => s.cash);
   const updateCash = usePortfolioStore((s) => s.setCash);
 
+  const { data } = useTreasuryBills();
+  const tbills: TBill[] = data?.tbills ?? [];
+
   const [selectedCountry, setSelectedCountry] = useState<Country>('US');
   const [expandedTBill, setExpandedTBill] = useState<string | null>(null);
   const [quantity, setQuantity] = useState<number>(1000);
 
-  const filteredTBills = TBILLS.filter((t) => t.country === selectedCountry);
+  const filteredTBills = tbills.filter((t) => t.country === selectedCountry);
 
   const formatCurrency = (value: number, currency = 'USD') => {
     return new Intl.NumberFormat('en-US', {

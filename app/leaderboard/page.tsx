@@ -4,58 +4,48 @@ import { useMemo, useState } from 'react';
 import { Topbar } from '@/components/layout';
 import { MobileNav } from '@/components/layout/mobile-nav';
 import { useGameStore, usePortfolioStore } from '@/lib/stores';
-import { COUNTRY_FLAGS } from '@/lib/data/mock-data';
+import { COUNTRY_FLAGS } from '@/lib/data/constants';
+import { useLeaderboard, type LeaderboardEntry } from '@/lib/hooks/use-market-data';
+import { getDevUserId } from '@/lib/supabase';
 import type { Country } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 import { Trophy, Medal, Crown, TrendingUp, ArrowUp, ArrowDown } from 'lucide-react';
 
-interface LeaderboardEntry {
-  rank: number;
-  playerId: string;
-  playerName: string;
-  country: Country;
-  portfolioValue: number;
-  weeklyPnL: number;
-  weeklyPnLPercent: number;
-  returnRate: number;
-  winRate: number;
-  totalTrades: number;
-}
-
-const MOCK_LEADERBOARD: LeaderboardEntry[] = [
-  { rank: 1, playerId: '1', playerName: 'AlphaTrader', country: 'US', portfolioValue: 125890, weeklyPnL: 12890, weeklyPnLPercent: 11.4, returnRate: 25.8, winRate: 68, totalTrades: 156 },
-  { rank: 2, playerId: '2', playerName: 'NairobiBull', country: 'KE', portfolioValue: 118450, weeklyPnL: 8450, weeklyPnLPercent: 7.7, returnRate: 18.5, winRate: 72, totalTrades: 89 },
-  { rank: 3, playerId: '3', playerName: 'LSELegend', country: 'UK', portfolioValue: 112340, weeklyPnL: 6340, weeklyPnLPercent: 5.9, returnRate: 12.3, winRate: 65, totalTrades: 234 },
-  { rank: 4, playerId: '4', playerName: 'WallStWolf', country: 'US', portfolioValue: 108900, weeklyPnL: 8900, weeklyPnLPercent: 8.9, returnRate: 8.9, winRate: 61, totalTrades: 312 },
-  { rank: 5, playerId: '5', playerName: 'EuroTrader', country: 'EU', portfolioValue: 105250, weeklyPnL: 3250, weeklyPnLPercent: 3.2, returnRate: 5.3, winRate: 58, totalTrades: 178 },
-  { rank: 6, playerId: '6', playerName: 'NaijaGrowth', country: 'NG', portfolioValue: 102100, weeklyPnL: 6100, weeklyPnLPercent: 6.4, returnRate: 2.1, winRate: 54, totalTrades: 45 },
-  { rank: 7, playerId: '7', playerName: 'TechSavvy', country: 'US', portfolioValue: 98750, weeklyPnL: -1250, weeklyPnLPercent: -1.2, returnRate: -1.2, winRate: 52, totalTrades: 267 },
-  { rank: 8, playerId: '8', playerName: 'SafariInvest', country: 'KE', portfolioValue: 95400, weeklyPnL: 8400, weeklyPnLPercent: 9.6, returnRate: -4.6, winRate: 49, totalTrades: 67 },
-  { rank: 9, playerId: '9', playerName: 'DiversifiedPro', country: 'EU', portfolioValue: 92100, weeklyPnL: -2900, weeklyPnLPercent: -3.0, returnRate: -7.9, winRate: 47, totalTrades: 189 },
-  { rank: 10, playerId: '10', playerName: 'EmergingMarket', country: 'NG', portfolioValue: 88900, weeklyPnL: -4100, weeklyPnLPercent: -4.4, returnRate: -11.1, winRate: 44, totalTrades: 123 },
-];
-
 export default function LeaderboardPage() {
   const playerName = useGameStore((s) => s.playerName);
   const playerCountry = useGameStore((s) => s.playerCountry);
   const totalValue = usePortfolioStore((s) => s.totalValue);
+  const { data } = useLeaderboard();
 
   const [activeTab, setActiveTab] = useState<'weekly' | 'all-time'>('weekly');
 
-  const userEntry = useMemo(() => ({
-    rank: 48,
-    playerId: 'current-user',
-    playerName,
-    country: playerCountry as Country,
-    portfolioValue: totalValue,
-    weeklyPnL: 2500,
-    weeklyPnLPercent: 2.5,
-    returnRate: 5.0,
-    winRate: 62,
-    totalTrades: 24,
-  }), [playerName, playerCountry, totalValue]);
+  const leaderboard: LeaderboardEntry[] = data?.entries ?? [];
+  const devUserId = getDevUserId();
+
+  const userEntry = useMemo((): LeaderboardEntry => {
+    const existing = leaderboard.find((entry) => entry.playerId === devUserId);
+    if (existing) return existing;
+
+    return {
+      rank: leaderboard.length + 1,
+      playerId: devUserId ?? 'current-user',
+      playerName,
+      country: playerCountry as Country,
+      portfolioValue: totalValue,
+      weeklyPnL: 0,
+      weeklyPnLPercent: 0,
+      returnRate: 0,
+      winRate: 0,
+      totalTrades: 0,
+    };
+  }, [leaderboard, devUserId, playerName, playerCountry, totalValue]);
+
+  const displayedEntries =
+    activeTab === 'weekly'
+      ? [...leaderboard].sort((a, b) => b.weeklyPnLPercent - a.weeklyPnLPercent)
+      : leaderboard;
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -168,7 +158,7 @@ export default function LeaderboardPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {MOCK_LEADERBOARD.map((entry) => (
+                  {displayedEntries.map((entry) => (
                     <TableRow
                       key={entry.playerId}
                       className={cn(
