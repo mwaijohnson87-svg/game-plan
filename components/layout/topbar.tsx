@@ -19,8 +19,8 @@ const NAV_ITEMS = [
 
 export function Topbar() {
   const pathname = usePathname();
-  const playerName = useGameStore((s) => s.playerName);
-  const weekNumber = useGameStore((s) => s.weekNumber);
+  const playerName = useGameStore((s: any) => s.playerName);
+  const weekNumber = useGameStore((s: any) => s.weekNumber);
 
   return (
     <div className="h-16 bg-surface border-b border-border flex items-center justify-between px-4">
