@@ -1,7 +1,8 @@
-'use client';
+"use client";
+
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase'; 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function AuthPage() {
@@ -20,99 +21,90 @@ export default function AuthPage() {
 
     try {
       if (isSignUp) {
-        // 1. Sign Up Logic
-        const { data, error } = await supabase.auth.signUp({
+        const { error } = await supabase.auth.signUp({
           email,
           password,
           options: {
-            data: { username: username || email.split('@')[0] }
+            data: { display_name: username }
           }
         });
         if (error) throw error;
-        alert('Registration successful! Check your email for verification link or log in.');
-        setIsSignUp(false);
+        alert("Check your email for the confirmation link!");
       } else {
-        // 2. Login Logic
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        router.push('/portfolio'); // Redirect directly to portfolio page on success
+        router.push('/portfolio');
       }
-    } catch (err: any) {
-      setErrorMsg(err.message || 'An error occurred during authentication');
+    } catch (error: any) {
+      setErrorMsg(error.message || "An error occurred");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
+    <div className="flex min-h-screen items-center justify-center bg-slate-950 p-4">
+      <Card className="w-full max-w-md border-slate-800 bg-slate-900 text-slate-100">
+        <CardHeader>
           <CardTitle className="text-2xl font-bold text-center">
-            {isSignUp ? 'Create an Account' : 'Welcome Back'}
+            {isSignUp ? "Create an Account" : "Welcome Back"}
           </CardTitle>
-          <CardDescription className="text-center">
-            {isSignUp ? 'Enter your details to sign up for the platform' : 'Enter your credentials to access your engine'}
+          <CardDescription className="text-center text-slate-400">
+            {isSignUp ? "Sign up to start tracking your portfolio" : "Log in to manage your positions"}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleAuth} className="space-y-4">
             {isSignUp && (
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Username</label>
-                <input
-                  type="text"
-                  required
-                  className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
-                  placeholder="e.g., investor_1"
-                  value={username}
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-slate-300">Username</label>
+                <input 
+                  type="text" 
+                  value={username} 
                   onChange={(e) => setUsername(e.target.value)}
+                  className="w-full rounded-md border border-slate-700 bg-slate-800 p-2 text-white outline-none focus:border-blue-500"
+                  required
                 />
               </div>
             )}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Email Address</label>
-              <input
-                type="email"
-                required
-                className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
-                placeholder="you@example.com"
-                value={email}
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-slate-300">Email Address</label>
+              <input 
+                type="email" 
+                value={email} 
                 onChange={(e) => setEmail(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Password</label>
-              <input
-                type="password"
+                className="w-full rounded-md border border-slate-700 bg-slate-800 p-2 text-white outline-none focus:border-blue-500"
                 required
-                className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
-                placeholder="••••••••"
-                value={password}
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-slate-300">Password</label>
+              <input 
+                type="password" 
+                value={password} 
                 onChange={(e) => setPassword(e.target.value)}
+                className="w-full rounded-md border border-slate-700 bg-slate-800 p-2 text-white outline-none focus:border-blue-500"
+                required
               />
             </div>
 
-            {errorMsg && <div className="text-sm text-destructive font-medium text-center">{errorMsg}</div>}
+            {errorMsg && <p className="text-sm text-red-400 text-center">{errorMsg}</p>}
 
-            <button
-              type="submit"
+            <button 
+              type="submit" 
               disabled={loading}
-              className="w-full rounded-md bg-primary py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
+              className="w-full rounded-md bg-blue-600 p-2 font-semibold text-white transition hover:bg-blue-500 disabled:opacity-50"
             >
-              {loading ? 'Processing...' : isSignUp ? 'Sign Up' : 'Log In'}
+              {loading ? "Processing..." : isSignUp ? "Sign Up" : "Log In"}
             </button>
           </form>
 
           <div className="mt-4 text-center text-sm">
-            <span className="text-muted-foreground">
-              {isSignUp ? 'Already have an account? ' : "Don't have an account? "}
-            </span>
-            <button
-              onClick={() => setIsSignUp(!isSignUp)}
-              className="text-primary underline font-medium"
+            <button 
+              onClick={() => setIsSignUp(!isSignUp)} 
+              className="text-blue-400 hover:underline"
             >
-              {isSignUp ? 'Log In' : 'Sign Up'}
+              {isSignUp ? "Already have an account? Log in" : "Don't have an account? Sign up"}
             </button>
           </div>
         </CardContent>
