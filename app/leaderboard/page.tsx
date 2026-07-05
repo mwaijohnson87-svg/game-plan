@@ -14,8 +14,9 @@ import { cn } from '@/lib/utils';
 import { Trophy, Medal, Crown, TrendingUp, ArrowUp, ArrowDown } from 'lucide-react';
 
 export default function LeaderboardPage() {
-  const playerName = useGameStore((s) => s.playerName);
-  const playerCountry = useGameStore((s) => s.playerCountry);
+ // Change lines 17 & 18 to this:
+const playerName = useGameStore((s: any) => s.playerName || "Player");
+const playerCountry = useGameStore((s: any) => s.playerCountry || "US");
   const totalValue = usePortfolioStore((s) => s.totalValue);
   const { data } = useLeaderboard();
 
