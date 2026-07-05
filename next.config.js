@@ -1,9 +1,13 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   eslint: {
-    ignoreDuringBuilds: true,
+    // Keeps your existing eslint block settings if any were hidden inside
+    ignoreDuringBuilds: true, 
   },
-  images: { unoptimized: true },
+  staticPageGenerationTimeout: 120, 
+  images: {
+    unoptimized: true, 
+  },
 };
 
 module.exports = nextConfig;
