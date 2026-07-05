@@ -16,27 +16,30 @@ export async function middleware(request: NextRequest) {
           return request.cookies.getAll();
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+          // Explicitly type the cookie item to bypass TypeScript strict mode checks
+          cookiesToSet.forEach((cookie: any) => request.cookies.set(cookie.name, cookie.value));
+          
           supabaseResponse = NextResponse.next({
             request,
           });
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
+          
+          cookiesToSet.forEach((cookie: any) =>
+            supabaseResponse.cookies.set(cookie.name, cookie.value, cookie.options)
           );
         },
       },
     }
   );
 
-  // Securely retrieves the current authenticated user session and rotates cookies
+  // Triggers session verification
   const { data: { user } } = await supabase.auth.getUser();
 
-  // If the user is NOT logged in and trying to view the dashboard (root route '/')
+  // If not logged in and viewing the dashboard, redirect to login
   if (!user && request.nextUrl.pathname === '/') {
     return NextResponse.redirect(new URL('/auth', request.url));
   }
 
-  // If the user IS logged in and trying to go back to the '/auth' page, slide them into the dashboard
+  // If logged in and viewing the auth page, redirect to dashboard
   if (user && request.nextUrl.pathname.startsWith('/auth')) {
     return NextResponse.redirect(new URL('/', request.url));
   }
@@ -44,16 +47,8 @@ export async function middleware(request: NextRequest) {
   return supabaseResponse;
 }
 
-// Controls exactly which routes this security middleware handles
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * Feel free to add paths like images or svgs if you have them in public
-     */
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };
