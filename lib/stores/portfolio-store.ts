@@ -46,8 +46,10 @@ export const usePortfolioStore = create<PortfolioState>((set, get) => ({
     get().updateTotalValue();
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      await supabase.from('profiles').update({ balance: cash }).eq('id', user.id);
+      // Force the app to use our guest fallback profile if no user exists
+      const userId = user?.id || '00000000-0000-0000-0000-000000000000';
+      
+      await supabase.from('profiles').update({ balance: cash }).eq('id', userId);
     } catch (err) {
       console.error('Error syncing cash balance:', err);
     }
@@ -81,8 +83,9 @@ export const usePortfolioStore = create<PortfolioState>((set, get) => ({
     // 2. Persist to Cloud Table
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      await supabase.from('holdings').insert([{ ...holding, user_id: user.id }]);
+const userId = user?.id || '00000000-0000-0000-0000-000000000000';
+
+const { data } = await supabase.from('portfolios').select('*').eq('user_id', userId);
     } catch (err) {
       console.error('Database failed to insert holding row:', err);
     }
